@@ -230,7 +230,7 @@ class VQGAN(pl.LightningModule):
     def add_model_specific_args(parent_parser):
         parser = argparse.ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument('--embedding_dim', type=int, default=256)
-        parser.add_argument('--n_codes', type=int, default=2048)
+        parser.add_argument('--n_codes', type=int, default=1024)
         parser.add_argument('--n_hiddens', type=int, default=240)
         parser.add_argument('--lr', type=float, default=3e-4)
         parser.add_argument('--downsample', nargs='+', type=int, default=(4, 4, 4))

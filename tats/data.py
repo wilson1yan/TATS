@@ -204,6 +204,33 @@ class HDF5Dataset(data.Dataset):
         return dict(**preprocess(video, self.resolution, sample_every_n_frames=self.sample_every_n_frames))
 
 
+class NumpyDataset(data.Dataset):
+    def __init__(self, data_file, sequence_length, train=True):
+        super().__init__()
+        split = 'train' if train else 'test'
+        self.files = glob.glob(osp.join(data_file, split, '**', '*.npz'), recursive=True)
+        self.seq_len = sequence_length
+        print(f'Found {len(self.files)} files')
+    
+    @property
+    def n_classes(self):
+        raise Exception('class conditioning not support for HDF5Dataset')
+
+    def __len__(self):
+        return len(self.files)
+    
+    def __getitem__(self, idx):
+        fname = self.files[idx]
+        data = np.load(fname)
+        video = data['video'] # THWC
+        video = torch.FloatTensor(video) / 255. - 0.5 # THWC [-0.5, 0.5]
+        start_idx = np.random.randint(0, video.shape[0] - self.seq_len + 1)
+        video = video[start_idx:start_idx + self.seq_len]
+        assert video.shape[0] == self.seq_len
+        video = video.movedim(-1, 0) # CTHW
+        return dict(video=video)
+
+
 class VideoData(pl.LightningDataModule):
 
     def __init__(self, args, shuffle=True):
@@ -217,6 +244,8 @@ class VideoData(pl.LightningDataModule):
         return dataset.n_classes
 
     def _dataset(self, train):
+        return NumpyDataset(self.args.data_path, self.args.sequence_length, train)
+        
         # check if it's coinrun dataset (path contains coinrun and it's a directory)
         if osp.isdir(self.args.data_path) and 'coinrun' in self.args.data_path.lower():
             if hasattr(self.args, 'coinrun_v2_dataloader') and self.args.coinrun_v2_dataloader:
@@ -305,7 +334,7 @@ class VideoData(pl.LightningDataModule):
     @staticmethod
     def add_data_specific_args(parent_parser):
         parser = argparse.ArgumentParser(parents=[parent_parser], add_help=False)
-        parser.add_argument('--data_path', type=str, default='/datasets01/Kinetics400_Frames/videos')
+        parser.add_argument('--data_path', type=str, default='/home/wilson/data/dl_maze_v2')
         parser.add_argument('--sequence_length', type=int, default=16)
         parser.add_argument('--resolution', type=int, default=64)
         parser.add_argument('--batch_size', type=int, default=32)
