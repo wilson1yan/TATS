@@ -224,11 +224,16 @@ class NumpyDataset(data.Dataset):
         data = np.load(fname)
         video = data['video'] # THWC
         video = torch.FloatTensor(video) / 255. - 0.5 # THWC [-0.5, 0.5]
-        start_idx = np.random.randint(0, video.shape[0] - self.seq_len + 1)
-        video = video[start_idx:start_idx + self.seq_len]
-        assert video.shape[0] == self.seq_len
-        video = video.movedim(-1, 0) # CTHW
-        return dict(video=video)
+
+        vs = []
+        for _ in range(4):
+            start_idx = np.random.randint(0, video.shape[0] - 4 * self.seq_len + 1)
+            v = video[start_idx:start_idx + self.seq_len]
+            assert v.shape[0] == self.seq_len
+            v = v.movedim(-1, 0) # CTHW
+            vs.append(v)
+        vs = torch.stack(vs)
+        return dict(video=vs)
 
 
 class VideoData(pl.LightningDataModule):

@@ -33,12 +33,12 @@ def main():
     callbacks.append(ModelCheckpoint(monitor='val/recon_loss', save_top_k=3, mode='min', filename='latest_checkpoint'))
     callbacks.append(ModelCheckpoint(every_n_train_steps=3000, save_top_k=-1, filename='{epoch}-{step}-{train/recon_loss:.2f}'))
     callbacks.append(ModelCheckpoint(every_n_train_steps=10000, save_top_k=-1, filename='{epoch}-{step}-10000-{train/recon_loss:.2f}'))
-    callbacks.append(ImageLogger(batch_frequency=750, max_images=4, clamp=True))
-    callbacks.append(VideoLogger(batch_frequency=1500, max_videos=4, clamp=True))
+    callbacks.append(ImageLogger(batch_frequency=1000, max_images=4, clamp=True))
+    callbacks.append(VideoLogger(batch_frequency=1000, max_videos=4, clamp=True))
 
     kwargs = dict()
     if args.gpus > 1:
-        kwargs = dict(distributed_backend='ddp', gpus=args.gpus)
+        kwargs = dict(strategy='ddp', gpus=args.gpus)
 
     # load the most recent checkpoint file
     base_dir = os.path.join(args.default_root_dir, 'lightning_logs')

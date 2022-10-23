@@ -72,7 +72,7 @@ class ImageLogger(Callback):
                 pl_module.train()
 
     def check_frequency(self, batch_idx):
-        if (batch_idx % self.batch_freq) == 0 or (batch_idx in self.log_steps):
+        if (batch_idx % self.batch_freq) == 0: #or (batch_idx in self.log_steps):
             try:
                 self.log_steps.pop(0)
             except IndexError:
@@ -147,7 +147,7 @@ class VideoLogger(Callback):
                 pl_module.train()
 
     def check_frequency(self, batch_idx):
-        if (batch_idx % self.batch_freq) == 0 or (batch_idx in self.log_steps):
+        if (batch_idx % self.batch_freq) == 0: #or (batch_idx in self.log_steps):
             try:
                 self.log_steps.pop(0)
             except IndexError:

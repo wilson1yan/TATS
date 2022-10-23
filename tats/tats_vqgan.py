@@ -178,6 +178,7 @@ class VQGAN(pl.LightningModule):
 
     def training_step(self, batch, batch_idx, optimizer_idx):
         x = batch['video']
+        x = x.view(-1, *x.shape[2:])
         if optimizer_idx == 0:
             recon_loss, _, vq_output, aeloss, perceptual_loss, gan_feat_loss = self.forward(x, optimizer_idx)
             commitment_loss = vq_output['commitment_loss']
@@ -189,6 +190,7 @@ class VQGAN(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         x = batch['video'] # TODO: batch['stft']
+        x = x.view(-1, *x.shape[2:])
         recon_loss, _, vq_output, perceptual_loss = self.forward(x)
         self.log('val/recon_loss', recon_loss, prog_bar=True)
         self.log('val/perceptual_loss', perceptual_loss, prog_bar=True)
@@ -212,6 +214,7 @@ class VQGAN(pl.LightningModule):
     def log_images(self, batch, **kwargs):
         log = dict()
         x = batch['video']
+        x = x.view(-1, *x.shape[2:])
         x = x.to(self.device)
         frames, frames_rec, _, _ = self(x, log_image=True)
         log["inputs"] = frames
@@ -221,6 +224,7 @@ class VQGAN(pl.LightningModule):
     def log_videos(self, batch, **kwargs):
         log = dict()
         x = batch['video']
+        x = x.view(-1, *x.shape[2:])
         _, _, x, x_rec = self(x, log_image=True)
         log["inputs"] = x
         log["reconstructions"] = x_rec
