@@ -212,7 +212,7 @@ class NumpyDataset(data.Dataset):
 
         vs = []
         for _ in range(4):
-            start_idx = np.random.randint(0, video.shape[0] - 4 * self.seq_len + 1)
+            start_idx = np.random.randint(0, video.shape[0] - self.seq_len + 1)
             v = video[start_idx:start_idx + self.seq_len]
             assert v.shape[0] == self.seq_len
             v = v.movedim(-1, 0) # CTHW
