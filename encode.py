@@ -10,11 +10,13 @@ from tats import VQGAN
 
 
 class NumpyDataset(torch.utils.data.Dataset):
-    def __init__(self, data_file, train=True):
+    def __init__(self, data_file, train=True, n_chunks=None, chunk_id=None):
         super().__init__()
         split = 'train' if train else 'test'
         self.files = glob.glob(osp.join(data_file, split, '**', '*.npz'), recursive=True)
-        print(f'Found {len(self.files)} files')
+        if n_chunks is not None:
+            self.files = np.array_split(self.files, n_chunks)[chunk_id].tolist()
+            print(n_chunks, chunk_id, len(self.files))
     
     def __len__(self):
         return len(self.files)
@@ -38,7 +40,7 @@ def worker(i, args, split, queue):
     model.eval()
     torch.set_grad_enabled(False)
 
-    dataset = NumpyDataset(args.data_path, train=split == 'train')
+    dataset = NumpyDataset(args.data_path, train=split == 'train', n_chunks=torch.cuda.device_count(), chunk_id=i)
     loader = torch.utils.data.DataLoader(
         dataset, batch_size=1, num_workers=4,
         pin_memory=False, shuffle=False
@@ -57,7 +59,7 @@ def process(split):
     vid_len = 300
     latent_shape = (vid_len // 4, 16, 16)
     n_devices  = torch.cuda.device_count()
-    dataset = NumpyDataset(args.data_file, train=split == 'train')
+    dataset = NumpyDataset(args.data_path, train=split == 'train')
     n_videos = len(dataset)
 
     args.split = split
@@ -80,9 +82,10 @@ def process(split):
         video, actions = out
         hf_file[f'{split}_data'][idx] = video
         hf_file[f'{split}_actions'][idx] = actions
+        idx += 1
         pbar.update(1)
     pbar.close()
-    assert idx == n_videos - 1, f'{idx} != {n_videos - 1}'
+    assert idx == n_videos, f'{idx} != {n_videos}'
 
 
 if __name__ == '__main__':
