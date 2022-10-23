@@ -41,17 +41,10 @@ class VideoDataset(data.Dataset):
         super().__init__()
         self.train = train
         self.sequence_length = sequence_length
-        self.resolution = resolution
-        self.sample_every_n_frames = sample_every_n_frames
 
         folder = osp.join(data_folder, 'train' if train else 'test')
         files = sum([glob.glob(osp.join(folder, '**', f'*.{ext}'), recursive=True)
                      for ext in self.exts], [])
-
-        # hacky way to compute # of classes (count # of unique parent directories)
-        self.classes = list(set([get_parent_dir(f) for f in files]))
-        self.classes.sort()
-        self.class_to_label = {c: i for i, c in enumerate(self.classes)}
 
         warnings.filterwarnings('ignore')
         cache_file = osp.join(folder, f"metadata_{sequence_length}.pkl")
@@ -74,18 +67,10 @@ class VideoDataset(data.Dataset):
         return self._clips.num_clips()
 
     def __getitem__(self, idx):
-        resolution = self.resolution
-        while True:
-            try:
-                video, _, _, idx = self._clips.get_clip(idx)
-            except Exception:
-                idx = (idx + 1) % self._clips.num_clips()
-                continue
-            break
-
-        class_name = get_parent_dir(self._clips.video_paths[idx])
-        label = self.class_to_label[class_name]
-        return dict(**preprocess(video, resolution, sample_every_n_frames=self.sample_every_n_frames), label=label)
+        video, _, _, idx = self._clips.get_clip(idx)
+        video = (video.float() / 255.) - 0.5
+        video = video.movedim(-1, 0)
+        return dict(video=video)
 
 
 def get_parent_dir(path):
@@ -249,7 +234,10 @@ class VideoData(pl.LightningDataModule):
         return dataset.n_classes
 
     def _dataset(self, train):
-        return NumpyDataset(self.args.data_path, self.args.sequence_length, train)
+        if 'minerl' in self.args.data_path:
+            return VideoDataset(self.args.data_path, self.args.sequence_length, train)
+        else:
+            return NumpyDataset(self.args.data_path, self.args.sequence_length, train)
         
         # check if it's coinrun dataset (path contains coinrun and it's a directory)
         if osp.isdir(self.args.data_path) and 'coinrun' in self.args.data_path.lower():
