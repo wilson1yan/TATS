@@ -1,4 +1,5 @@
 import argparse
+import numpy as np
 import h5py
 import torch
 from tats import VQGAN
@@ -16,12 +17,13 @@ def main():
     torch.set_grad_enabled(False)
 
     data = h5py.File(args.data_path, 'r')
-    encodings = data['test_data'][:args.batch_size, 20:20 + args.seq_len]
+    encodings = data['test_data'][:args.batch_size, 20:20 + args.seq_len].astype(np.int32)
     encodings = torch.LongTensor(encodings).cuda()
     model = VQGAN.load_from_checkpoint(args.ckpt).cuda()
     recon = model.decode(encodings)
     recon = torch.clamp(recon + 0.5, 0, 1) # BCTHW
     recon = recon.cpu()
+    print(recon.shape)
     save_video_grid(recon, 'recon_vq.mp4')
 
     print('done')

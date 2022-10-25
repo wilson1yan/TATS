@@ -42,8 +42,8 @@ def worker(i, args, split, queue):
 
     dataset = NumpyDataset(args.data_path, train=split == 'train', n_chunks=torch.cuda.device_count(), chunk_id=i)
     loader = torch.utils.data.DataLoader(
-        dataset, batch_size=1, num_workers=4,
-        pin_memory=False, shuffle=False
+        dataset, batch_size=args.batch_size, num_workers=args.batch_size,
+        pin_memory=False, shuffle=False, drop_last=False
     )
     for batch in loader:
         video, actions = batch['video'], batch['actions']
@@ -80,10 +80,12 @@ def process(split):
             done += 1
             continue
         video, actions = out
-        hf_file[f'{split}_data'][idx] = video
-        hf_file[f'{split}_actions'][idx] = actions
-        idx += 1
-        pbar.update(1)
+        assert len(video) == len(actions)
+        for v, a in zip(video, actions):
+            hf_file[f'{split}_data'][idx] = v
+            hf_file[f'{split}_actions'][idx] = a
+            idx += 1
+        pbar.update(len(video))
     pbar.close()
     assert idx == n_videos, f'{idx} != {n_videos}'
 
@@ -95,6 +97,7 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--ckpt', type=str, required=True)
     parser.add_argument('-d', '--data_path', type=str, required=True)
     parser.add_argument('-o', '--output', type=str, required=True)
+    parser.add_argument('-b', '--batch_size', type=int, default=1)
     args = parser.parse_args()
 
     hf_file = h5py.File(args.output, 'a')
