@@ -209,6 +209,7 @@ class NumpyDataset(data.Dataset):
         data = np.load(fname)
         video = data['video'] # THWC
         video = torch.FloatTensor(video) / 255. - 0.5 # THWC [-0.5, 0.5]
+        return dict(video=video.movedim(-1, 0), actions=torch.LongTensor(data['actions']))
 
         vs = []
         for _ in range(4):
@@ -234,7 +235,7 @@ class VideoData(pl.LightningDataModule):
         return dataset.n_classes
 
     def _dataset(self, train):
-        if 'minerl' in self.args.data_path:
+        if 'mine' in self.args.data_path:
             return VideoDataset(self.args.data_path, self.args.sequence_length, train)
         else:
             return NumpyDataset(self.args.data_path, self.args.sequence_length, train)
